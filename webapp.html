@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch Me Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f8ff;
+        }
+        
+        .topheader {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            z-index: 100;
+        }
+        
+        .wordheader {
+            font-size: 18px;
+        }
+        
+        .wordheader a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        
+        .divider {
+            color: #999;
+        }
+        
+        h1.game-title {
+            margin-top: 80px;
+            text-align: center;
+            color: #333;
+        }
+
+        #gameCanvas {
+            border: 2px solid black;
+            background-color: white;
+            margin-top: 20px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #score, #timer {
+            font-size: 24px;
+        }
+
+        #startBtn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #startBtn:hover {
+            background-color: #45a049;
+        }
+
+        .slider-container {
+            margin-top: 10px;
+        }
+
+        .slider {
+            width: 200px;
+        }
+
+        .select-container {
+            margin-top: 10px;
+        }
+    </style>
+    <link href="css/funzies.css" rel="stylesheet">
+</head>
+<body>
+    <div class="topheader">
+        <span class="wordheader">
+            <a href="index.html">Professional Page</a> <span class="divider">|</span>
+            <a href="scratch.html">Home</a> <span class="divider">|</span>
+            <a href="tableau.html">Tableau</a> <span class="divider">|</span>
+            <a href="#">Web App</a>
+        </span>
+    </div>
+    
+
+    <h1 class="game-title">Catch Me If You CAN!?!?!?!</h1>
+    
+    <div class="controls">
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
+        <div id="score">Score: 0</div>
+        <div id="timer">Time Left: 30s</div>
+
+        <div class="select-container">
+            <label for="timeSelect">Select Game Time: </label>
+            <select id="timeSelect">
+                <option value="15">15 Seconds</option>
+                <option value="30" selected>30 Seconds</option>
+                <option value="45">45 Seconds</option>
+                <option value="60">60 Seconds</option>
+            </select>
+        </div>
+
+        <div class="slider-container">
+            <label for="speedSlider">Speed of Falling Objects:</label>
+            <input type="range" id="speedSlider" class="slider" min="1" max="10" value="5">
+        </div>
+        <button id="startBtn">Start New Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const timeSelect = document.getElementById('timeSelect');
+        let basketX = canvas.width / 2 - 50;
+        let basketWidth = 100;
+        let basketSpeed = 10;
+        let fallingObjects = [];
+        let score = 0;
+        let timer = 30;
+        let objectFallSpeed = 5;
+        let gameRunning = false;
+        let gameTimer;
+
+        function startNewGame() {
+            basketX = canvas.width / 2 - basketWidth / 2;
+            score = 0;
+            timer = parseInt(timeSelect.value);
+            fallingObjects = [];
+            gameRunning = true;
+            scoreElement.textContent = 'Score: ' + score;
+            timerElement.textContent = 'Time Left: ' + timer + 's';
+            clearInterval(gameTimer); 
+            gameTimer = setInterval(updateTimer, 1000); 
+            gameInterval = setInterval(gameLoop, 1000 / 60);
+        }
+
+        function updateTimer() {
+            if (gameRunning) {
+                timer--;
+                timerElement.textContent = 'Time Left: ' + timer + 's';
+                if (timer <= 0) {
+                    endGame();
+                }
+            }
+        }
+
+        function endGame() {
+            clearInterval(gameInterval); // Stop the game loop
+            clearInterval(gameTimer); // Stop the timer
+            gameRunning = false;
+            alert('Game Over! Final Score: ' + score);
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            moveBasket();
+            drawBasket();
+            spawnFallingObjects();
+            moveFallingObjects();
+            detectCollisions();
+            drawFallingObjects();
+        }
+
+        function moveBasket() {
+            if (leftPressed && basketX > 0) {
+                basketX -= basketSpeed;
+            }
+            if (rightPressed && basketX < canvas.width - basketWidth) {
+                basketX += basketSpeed;
+            }
+        }
+
+        function drawBasket() {
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(basketX, canvas.height - 30, basketWidth, 20);
+        }
+
+        function spawnFallingObjects() {
+            if (Math.random() < 0.02) {
+                let objectX = Math.random() * (canvas.width - 20);
+                fallingObjects.push({ x: objectX, y: 0, width: 20, height: 20 });
+            }
+        }
+
+        function moveFallingObjects() {
+            for (let i = 0; i < fallingObjects.length; i++) {
+                fallingObjects[i].y += objectFallSpeed;
+                if (fallingObjects[i].y > canvas.height) {
+                    fallingObjects.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function drawFallingObjects() {
+            ctx.fillStyle = 'red';
+            for (let i = 0; i < fallingObjects.length; i++) {
+                ctx.fillRect(fallingObjects[i].x, fallingObjects[i].y, fallingObjects[i].width, fallingObjects[i].height);
+            }
+        }
+
+        function detectCollisions() {
+            for (let i = 0; i < fallingObjects.length; i++) {
+                let object = fallingObjects[i];
+                if (object.y + object.height > canvas.height - 30 &&
+                    object.x + object.width > basketX &&
+                    object.x < basketX + basketWidth) {
+                    fallingObjects.splice(i, 1);
+                    score++;
+                    scoreElement.textContent = 'Score: ' + score;
+                    i--;
+                }
+            }
+        }
+
+        let leftPressed = false;
+        let rightPressed = false;
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                leftPressed = true;
+            }
+            if (event.key === 'ArrowRight') {
+                rightPressed = true;
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            if (event.key === 'ArrowLeft') {
+                leftPressed = false;
+            }
+            if (event.key === 'ArrowRight') {
+                rightPressed = false;
+            }
+        });
+
+        speedSlider.addEventListener('input', function() {
+            objectFallSpeed = parseInt(speedSlider.value);
+        });
+
+        startBtn.addEventListener('click', startNewGame);
+
+        
+        startNewGame();
+    </script>
+</body>
+</html> 
